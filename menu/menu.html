@@ -181,10 +181,9 @@ const slides = document.querySelectorAll(".carousel-item");
 const playBtn = document.getElementById("playButton");
 const total = slides.length;
 
-      document.getElementById('next').onclick = () => {
-        index = (index + 1) % total;
-        update();
-      };
+function update() {
+  track.style.transform = `translateX(-${index * 100}%)`;
+}
 
 document.getElementById("prev").onclick = () => {
   index = (index - 1 + total) % total;
@@ -201,6 +200,7 @@ playBtn.onclick = () => {
   const url = activeSlide.getAttribute("data-link");
   if (url) window.location.href = url;
 };
+
 </script>
 
 </body>
