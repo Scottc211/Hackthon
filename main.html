@@ -13,10 +13,25 @@
   <body>
     <h1>HAND TRACKING TEST</h1>
 
-    <div id="feed">
-      <video id="input_video" autoplay playsinline></video>
-      <canvas id="output_canvas" width="640" height="480"></canvas>
+    <div id="feed" style="position: relative; width: 640px; height: 480px">
+      <video
+        id="input_video"
+        autoplay
+        playsinline
+        style="position: absolute; left: 0; top: 0; width: 640px; height: 480px"
+      ></video>
+
+      <canvas
+        id="output_canvas"
+        width="640"
+        height="480"
+        style="position: absolute; left: 0; top: 0"
+      ></canvas>
     </div>
+    <div id="gamecontainer">
+      <iframe id="gameframe" width="640" height="480"></iframe>
+    </div>
+    <button onclick="loadGame('pacman')">Play Pac-Man</button>
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
@@ -40,76 +55,82 @@
         minDetectionConfidence: 0.5,
         minTrackingConfidence: 0.5,
       });
-let lastDirection = null;
-let stableDirection = null;
-let sameCount = 0;
-hands.onResults((results) => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let lastDirection = null;
+      let stableDirection = null;
+      let sameCount = 0;
+      hands.onResults((results) => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (results.multiHandLandmarks) {
-    for (const landmarks of results.multiHandLandmarks) {
+        if (results.multiHandLandmarks) {
+          for (const landmarks of results.multiHandLandmarks) {
+            // Draw the hand skeleton
+            drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
+              color: '#00FF00',
+              lineWidth: 2,
+            });
+            drawLandmarks(ctx, landmarks, {
+              color: '#FF0000',
+              lineWidth: 1,
+            });
 
-      // Draw the hand skeleton
-      drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
-        color: '#00FF00',
-        lineWidth: 2,
+            // ------------------------------
+            // GET INDEX FINGER TIP + WRIST
+            // ------------------------------
+            const indexTip = landmarks[8]; // Index fingertip landmark
+            const wrist = landmarks[0]; // Wrist landmark (palm reference)
+
+            // Direction vector
+            const dx = indexTip.x - wrist.x;
+            const dy = indexTip.y - wrist.y;
+
+            // ------------------------------
+            // DRAW BLUE ARROW (POINTING DIR)
+            // ------------------------------
+            const startX = wrist.x * canvas.width;
+            const startY = wrist.y * canvas.height;
+            const endX = indexTip.x * canvas.width;
+            const endY = indexTip.y * canvas.height;
+
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // --- RAW DIRECTION ---
+            let direction = '';
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+              direction = dx < 0 ? 'right' : 'left';
+            } else {
+              direction = dy < 0 ? 'up' : 'down';
+            }
+
+            // --- SMOOTHING / DEBOUNCING ---
+            if (direction === lastDirection) {
+              sameCount++;
+            } else {
+              sameCount = 1; // restart count
+              lastDirection = direction;
+            }
+
+            // Update only if consistent for 4 frames
+            if (sameCount >= 4) {
+              stableDirection = direction;
+            }
+
+            console.log('Stable direction:', stableDirection);
+
+            if (stableDirection) {
+              if (stableDirection === 'left') sendKey('ArrowLeft');
+              if (stableDirection === 'right') sendKey('ArrowRight');
+              if (stableDirection === 'up') sendKey('ArrowUp');
+              if (stableDirection === 'down') sendKey('ArrowDown');
+            }
+          }
+        }
       });
-      drawLandmarks(ctx, landmarks, {
-        color: '#FF0000',
-        lineWidth: 1,
-      });
-
-      // ------------------------------
-      // GET INDEX FINGER TIP + WRIST
-      // ------------------------------
-      const indexTip = landmarks[8];   // Index fingertip landmark
-      const wrist = landmarks[0];      // Wrist landmark (palm reference)
-
-      // Direction vector
-      const dx = indexTip.x - wrist.x;
-      const dy = indexTip.y - wrist.y;
-
-      // ------------------------------
-      // DRAW BLUE ARROW (POINTING DIR)
-      // ------------------------------
-      const startX = wrist.x * canvas.width;
-      const startY = wrist.y * canvas.height;
-      const endX = indexTip.x * canvas.width;
-      const endY = indexTip.y * canvas.height;
-
-      ctx.beginPath();
-      ctx.moveTo(startX, startY);
-      ctx.lineTo(endX, endY);
-      ctx.strokeStyle = "blue";
-      ctx.lineWidth = 4;
-      ctx.stroke();
-
-// --- RAW DIRECTION ---
-let direction = "";
-
-if (Math.abs(dx) > Math.abs(dy)) {
-  direction = dx < 0 ? "right" : "left";
-} else {
-  direction = dy < 0 ? "up" : "down";
-}
-
-// --- SMOOTHING / DEBOUNCING ---
-if (direction === lastDirection) {
-  sameCount++;
-} else {
-  sameCount = 1;          // restart count
-  lastDirection = direction;
-}
-
-// Update only if consistent for 4 frames
-if (sameCount >= 4) {
-  stableDirection = direction;
-}
-
-console.log("Stable direction:", stableDirection);
-    }
-  }
-});
 
       const camera = new Camera(video, {
         onFrame: async () => {
@@ -119,7 +140,28 @@ console.log("Stable direction:", stableDirection);
         height: 480,
       });
 
+      function sendKey(key) {
+        const iframe = document.getElementById('gameframe');
+        if (!iframe || !iframe.contentWindow) return;
+
+        iframe.contentWindow.dispatchEvent(
+          new KeyboardEvent('keydown', { key })
+        );
+
+        // Release after a short delay (prevents stuck movement)
+        setTimeout(() => {
+          iframe.contentWindow.dispatchEvent(
+            new KeyboardEvent('keyup', { key })
+          );
+        }, 70);
+      }
+
       camera.start();
+    </script>
+    <script>
+      function loadGame(name) {
+        document.getElementById('gameframe').src = `games/${name}/index.html`;
+      }
     </script>
   </body>
 </html>
