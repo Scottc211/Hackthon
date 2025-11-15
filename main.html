@@ -40,23 +40,76 @@
         minDetectionConfidence: 0.5,
         minTrackingConfidence: 0.5,
       });
+let lastDirection = null;
+let stableDirection = null;
+let sameCount = 0;
+hands.onResults((results) => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      hands.onResults((results) => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (results.multiHandLandmarks) {
+    for (const landmarks of results.multiHandLandmarks) {
 
-        if (results.multiHandLandmarks) {
-          for (const landmarks of results.multiHandLandmarks) {
-            drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
-              color: '#00FF00',
-              lineWidth: 2,
-            });
-            drawLandmarks(ctx, landmarks, {
-              color: '#FF0000',
-              lineWidth: 1,
-            });
-          }
-        }
+      // Draw the hand skeleton
+      drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
+        color: '#00FF00',
+        lineWidth: 2,
       });
+      drawLandmarks(ctx, landmarks, {
+        color: '#FF0000',
+        lineWidth: 1,
+      });
+
+      // ------------------------------
+      // GET INDEX FINGER TIP + WRIST
+      // ------------------------------
+      const indexTip = landmarks[8];   // Index fingertip landmark
+      const wrist = landmarks[0];      // Wrist landmark (palm reference)
+
+      // Direction vector
+      const dx = indexTip.x - wrist.x;
+      const dy = indexTip.y - wrist.y;
+
+      // ------------------------------
+      // DRAW BLUE ARROW (POINTING DIR)
+      // ------------------------------
+      const startX = wrist.x * canvas.width;
+      const startY = wrist.y * canvas.height;
+      const endX = indexTip.x * canvas.width;
+      const endY = indexTip.y * canvas.height;
+
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.strokeStyle = "blue";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+// --- RAW DIRECTION ---
+let direction = "";
+
+if (Math.abs(dx) > Math.abs(dy)) {
+  direction = dx < 0 ? "right" : "left";
+} else {
+  direction = dy < 0 ? "up" : "down";
+}
+
+// --- SMOOTHING / DEBOUNCING ---
+if (direction === lastDirection) {
+  sameCount++;
+} else {
+  sameCount = 1;          // restart count
+  lastDirection = direction;
+}
+
+// Update only if consistent for 4 frames
+if (sameCount >= 4) {
+  stableDirection = direction;
+}
+
+console.log("Stable direction:", stableDirection);
+    }
+  }
+});
 
       const camera = new Camera(video, {
         onFrame: async () => {
