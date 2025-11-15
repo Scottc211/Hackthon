@@ -3,36 +3,40 @@
   <head>
     <title>Hand Tracking Demo</title>
     <style>
-      #output_canvas {
-        border: 2px solid red;
+      #feed {
+        position: relative;
         width: 640px;
         height: 480px;
+      }
+
+      #input_video,
+      #output_canvas {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 640px;
+        height: 480px;
+      }
+
+      #output_canvas {
+        border: 2px solid red;
       }
     </style>
   </head>
   <body>
     <h1>HAND TRACKING TEST</h1>
 
-    <div id="feed" style="position: relative; width: 640px; height: 480px">
-      <video
-        id="input_video"
-        autoplay
-        playsinline
-        style="position: absolute; left: 0; top: 0; width: 640px; height: 480px"
-      ></video>
-
-      <canvas
-        id="output_canvas"
-        width="640"
-        height="480"
-        style="position: absolute; left: 0; top: 0"
-      ></canvas>
+    <div id="feed">
+      <video id="input_video" autoplay playsinline></video>
+      <canvas id="output_canvas" width="640" height="480"></canvas>
     </div>
+
     <div id="gamecontainer">
       <iframe id="gameframe" width="640" height="480"></iframe>
     </div>
     <button onclick="loadGame('pacman')">Play Pac-Man</button>
 
+    <!-- MediaPipe libs -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
@@ -42,8 +46,7 @@
       const canvas = document.getElementById('output_canvas');
       const ctx = canvas.getContext('2d');
 
-      video.setAttribute('playsinline', true);
-
+      // ---- SETUP MEDIAPIPE HANDS ----
       const hands = new Hands({
         locateFile: (file) =>
           `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
@@ -55,9 +58,12 @@
         minDetectionConfidence: 0.5,
         minTrackingConfidence: 0.5,
       });
+
       let lastDirection = null;
       let stableDirection = null;
       let sameCount = 0;
+      let lastSentDirection = null; // to avoid sending the same key constantly
+
       hands.onResults((results) => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -73,19 +79,13 @@
               lineWidth: 1,
             });
 
-            // ------------------------------
-            // GET INDEX FINGER TIP + WRIST
-            // ------------------------------
-            const indexTip = landmarks[8]; // Index fingertip landmark
-            const wrist = landmarks[0]; // Wrist landmark (palm reference)
+            const indexTip = landmarks[8];
+            const wrist = landmarks[0];
 
-            // Direction vector
             const dx = indexTip.x - wrist.x;
             const dy = indexTip.y - wrist.y;
 
-            // ------------------------------
-            // DRAW BLUE ARROW (POINTING DIR)
-            // ------------------------------
+            // Draw blue arrow
             const startX = wrist.x * canvas.width;
             const startY = wrist.y * canvas.height;
             const endX = indexTip.x * canvas.width;
@@ -98,40 +98,52 @@
             ctx.lineWidth = 4;
             ctx.stroke();
 
-            // --- RAW DIRECTION ---
+            // Determine direction
             let direction = '';
-
             if (Math.abs(dx) > Math.abs(dy)) {
               direction = dx < 0 ? 'right' : 'left';
             } else {
               direction = dy < 0 ? 'up' : 'down';
             }
 
-            // --- SMOOTHING / DEBOUNCING ---
+            // Smoothing
             if (direction === lastDirection) {
               sameCount++;
             } else {
-              sameCount = 1; // restart count
+              sameCount = 1;
               lastDirection = direction;
             }
 
-            // Update only if consistent for 4 frames
             if (sameCount >= 4) {
               stableDirection = direction;
             }
 
             console.log('Stable direction:', stableDirection);
 
-            if (stableDirection) {
-              if (stableDirection === 'left') sendKey('ArrowLeft');
-              if (stableDirection === 'right') sendKey('ArrowRight');
-              if (stableDirection === 'up') sendKey('ArrowUp');
-              if (stableDirection === 'down') sendKey('ArrowDown');
+            // Only send when direction changes
+            if (stableDirection && stableDirection !== lastSentDirection) {
+              lastSentDirection = stableDirection;
+
+              switch (stableDirection) {
+                case 'left':
+                  sendKey('ArrowLeft');
+                  break;
+                case 'right':
+                  sendKey('ArrowRight');
+                  break;
+                case 'up':
+                  sendKey('ArrowUp');
+                  break;
+                case 'down':
+                  sendKey('ArrowDown');
+                  break;
+              }
             }
           }
         }
       });
 
+      // ---- CAMERA SETUP ----
       const camera = new Camera(video, {
         onFrame: async () => {
           await hands.send({ image: video });
@@ -140,27 +152,70 @@
         height: 480,
       });
 
+      camera.start();
+
+      // ---- SEND KEYS INTO GAME IFRAME ----
       function sendKey(key) {
         const iframe = document.getElementById('gameframe');
         if (!iframe || !iframe.contentWindow) return;
 
-        iframe.contentWindow.dispatchEvent(
-          new KeyboardEvent('keydown', { key })
-        );
+        const doc = iframe.contentWindow.document;
 
-        // Release after a short delay (prevents stuck movement)
-        setTimeout(() => {
-          iframe.contentWindow.dispatchEvent(
-            new KeyboardEvent('keyup', { key })
+        const keyCode =
+          key === 'ArrowLeft'
+            ? 37
+            : key === 'ArrowUp'
+            ? 38
+            : key === 'ArrowRight'
+            ? 39
+            : key === 'ArrowDown'
+            ? 40
+            : key === 'a'
+            ? 65
+            : key === 'w'
+            ? 87
+            : key === 's'
+            ? 83
+            : key === 'd'
+            ? 68
+            : 0;
+
+        function fire(type) {
+          const event = doc.createEvent('KeyboardEvent');
+          event.initKeyboardEvent(
+            type, // "keydown" or "keyup"
+            true, // bubbles
+            true, // cancelable
+            iframe.contentWindow,
+            key, // key
+            0, // location
+            '', // modifiers
+            false, // repeat
+            keyCode // keyCode
           );
-        }, 70);
+
+          Object.defineProperty(event, 'keyCode', { get: () => keyCode });
+          Object.defineProperty(event, 'which', { get: () => keyCode });
+          Object.defineProperty(event, 'key', { get: () => key });
+
+          doc.dispatchEvent(event);
+        }
+
+        fire('keydown');
+        setTimeout(() => fire('keyup'), 80);
       }
 
-      camera.start();
-    </script>
-    <script>
+      // ---- LOAD GAME INTO IFRAME ----
       function loadGame(name) {
-        document.getElementById('gameframe').src = `games/${name}/index.html`;
+        const iframe = document.getElementById('gameframe');
+        iframe.src = `games/${name}/index.html`;
+
+        iframe.onload = () => {
+          // Try to focus so real keyboard also works
+          if (iframe.contentWindow) {
+            iframe.contentWindow.focus();
+          }
+        };
       }
     </script>
   </body>
