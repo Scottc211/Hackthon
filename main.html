@@ -26,13 +26,15 @@
   <body>
     <h1>HAND TRACKING TEST</h1>
 
-    <div id="feed">
-      <video id="input_video" autoplay playsinline></video>
-      <canvas id="output_canvas" width="640" height="480"></canvas>
-    </div>
+    <div id="layout">
+      <div id="feed">
+        <video id="input_video" autoplay playsinline></video>
+        <canvas id="output_canvas" width="640" height="480"></canvas>
+      </div>
 
-    <div id="gamecontainer">
-      <iframe id="gameframe" width="640" height="480"></iframe>
+      <div id="gamecontainer">
+        <iframe id="gameframe" width="640" height="480"></iframe>
+      </div>
     </div>
     <button onclick="loadGame('pacman')">Play Pac-Man</button>
 
