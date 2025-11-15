@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Purple Box Carousel</title>
+
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+
+    /* Background screenshot */
+    background-image: url("Screenshot 2025-11-15 153016.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+
+    font-family: Arial, sans-serif;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  /* 🔧 Horizontal hot-fix variable for easy adjustments */
+  :root {
+    --carousel-offset-x: 20px;   /* Increase = move right, decrease = move left */
+  }
+
+  /* The purple box area where the carousel goes */
+  .purple-box-area {
+    width: 70vw;
+    max-width: 1100px;
+    aspect-ratio: 16 / 9;
+
+    /* neon border removed */
+    border: none;
+
+    box-sizing: border-box;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    /* Center it + allow offset tuning */
+    position: relative;
+    left: var(--carousel-offset-x);
+
+    /* slight transparency/blur for depth */
+    background: rgba(0,0,0,0.15);
+    backdrop-filter: blur(2px);
+  }
+
+  /* Carousel container */
+  .carousel-container {
+    width: 90%;
+    height: 90%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .carousel-track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.5s ease-in-out;
+  }
+
+  .carousel-item {
+    min-width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  /* Static image */
+  .carousel-item img.static {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+  }
+
+  /* GIF image layered on top */
+  .carousel-item img.gif {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.25s ease-out;
+    position: absolute;
+  }
+
+  /* Hover swap */
+  .carousel-item:hover .static { opacity: 0; }
+  .carousel-item:hover .gif { opacity: 1; }
+
+  /* Buttons */
+  .btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.8);
+    border: none;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 22px;
+    border-radius: 10px;
+    transition: 0.2s;
+  }
+
+  .btn:hover {
+    background: white;
+  }
+
+  #prev { left: 15px; }
+  #next { right: 15px; }
+</style>
+
+</head>
+
+<body>
+
+<div class="purple-box-area">
+
+  <div class="carousel-container">
+    <div class="carousel-track" id="track">
+
+      <!-- Slide 1 -->
+      <div class="carousel-item">
+        <img class="static" src="image1.jpg" alt="">
+        <img class="gif" src="image1.gif" alt="">
+      </div>
+
+      <!-- Slide 2 -->
+      <div class="carousel-item">
+        <img class="static" src="image2.jpg" alt="">
+        <img class="gif" src="image2.gif" alt="">
+      </div>
+
+      <!-- Slide 3 -->
+      <div class="carousel-item">
+        <img class="static" src="image3.jpg" alt="">
+        <img class="gif" src="image3.gif" alt="">
+      </div>
+
+    </div>
+
+    <button id="prev" class="btn">&#10094;</button>
+    <button id="next" class="btn">&#10095;</button>
+  </div>
+
+</div>
+
+<script>
+let index = 0;
+const track = document.getElementById("track");
+const slides = document.querySelectorAll(".carousel-item");
+const total = slides.length;
+
+function update() {
+  track.style.transform = `translateX(${-index * 100}%)`;
+}
+
+document.getElementById("prev").onclick = () => {
+  index = (index - 1 + total) % total;
+  update();
+};
+
+document.getElementById("next").onclick = () => {
+  index = (index + 1) % total;
+  update();
+};
+
+// Optional auto-slide
+setInterval(() => {
+  index = (index + 1) % total;
+  update();
+}, 5000);
+</script>
+
+</body>
+</html>
