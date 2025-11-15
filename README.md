@@ -1,3 +1,5 @@
 # Hackthon
 
-Now we hav a description
+Now we have a description
+
+PACMAN emulator
