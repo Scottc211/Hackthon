@@ -74,12 +74,48 @@
       #output_canvas {
         border: 2px solid #ff4444;
       }
+      #direction-indicator {
+        margin-top: 40px;
+        text-align: center;
+        font-family: 'Press Start 2P', cursive !important;
+        color: #ffd700;
+        z-index: 99999;
+        position: relative;
+      }
+
+      #direction-indicator .arrow {
+        display: inline-block;
+        width: 80px;
+        height: 80px;
+        line-height: 80px;
+        font-size: 64px;
+        opacity: 0.3;
+        filter: drop-shadow(0 0 6px #000);
+        transition: 0.15s ease-out;
+      }
+
+      #direction-indicator .middle-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #direction-indicator .arrow.active {
+        opacity: 1;
+        color: #ffd700;
+        filter: drop-shadow(0 0 8px #ffd700);
+      }
     </style>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="returnlink">
       <a href="menu.html">&larr; Back to Menu</a>
     </div>
+
     <div id="layout">
       <!-- GAME takes the left column -->
       <div id="gamecontainer">
@@ -87,9 +123,20 @@
       </div>
 
       <!-- VIDEO FEED placed top-right -->
-      <div id="feed">
-        <video id="input_video" autoplay playsinline></video>
-        <canvas id="output_canvas" width="320" height="240"></canvas>
+      <div id="feed-wrapper">
+        <div id="feed">
+          <video id="input_video" autoplay playsinline></video>
+          <canvas id="output_canvas" width="320" height="240"></canvas>
+        </div>
+        <div id="direction-indicator">
+          <div class="arrow up">▲</div>
+          <div class="middle-row">
+            <div class="arrow left">◄</div>
+            <div class="arrow center"></div>
+            <div class="arrow right">►</div>
+          </div>
+          <div class="arrow down">▼</div>
+        </div>
       </div>
     </div>
 
@@ -171,8 +218,9 @@
               lastDirection = direction;
             }
 
-            if (sameCount >= 3) {
+            if (sameCount >= 2) {
               stableDirection = direction;
+              updateArrows(stableDirection);
             }
 
             console.log('Stable direction:', stableDirection);
@@ -281,6 +329,27 @@
 
       if (game) {
         loadGame(game);
+      }
+    </script>
+    <script>
+      function updateArrows(direction) {
+        const arrows = document.querySelectorAll('#direction-indicator .arrow');
+        arrows.forEach((a) => a.classList.remove('active'));
+
+        if (!direction) return;
+
+        const selector = {
+          up: '.up',
+          down: '.down',
+          left: '.left',
+          right: '.right',
+        }[direction];
+
+        if (selector) {
+          document
+            .querySelector(`#direction-indicator ${selector}`)
+            .classList.add('active');
+        }
       }
     </script>
   </body>
