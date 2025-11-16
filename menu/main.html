@@ -44,7 +44,7 @@
         position: fixed;
         top: 15px;
         left: 15px;
-        z-index: 20;
+        z-index: 400;
       }
 
       #returnlink a {
@@ -174,6 +174,7 @@
         background: rgba(255, 215, 0, 0.55);
         transform: scale(1.12);
       }
+
       /* Volume Control */
       #volume-control {
         width: 220px;
@@ -205,6 +206,48 @@
         border-radius: 50%;
         border: 2px;
       }
+
+      /* NO HAND OVERLAY (debounced) */
+      #no-hand-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 40px;
+        color: #00ccff;
+        text-shadow: 0 0 8px #00ccff;
+        z-index: 200;
+      }
+
+      /* INSTRUCTION OVERLAY */
+      #instruction-overlay {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 340px;
+        padding: 20px;
+        text-align: center;
+        background: rgba(0, 0, 0, 0.75);
+        border: 3px solid #00ccff;
+        border-radius: 12px;
+        box-shadow: 0 0 16px #00ccff;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 12px;
+        color: #00ccff;
+        pointer-events: none;
+        z-index: 210;
+        opacity: 0;
+        transition: opacity 0.6s ease-out;
+      }
+
+      #instruction-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
     </style>
 
     <link
@@ -216,6 +259,17 @@
   <body>
     <!-- BACKGROUND FADE -->
     <div id="background" class="bg-fade"></div>
+
+    <!-- OVERLAYS -->
+    <div id="no-hand-overlay">NO HAND DETECTED</div>
+    <div id="instruction-overlay">
+      <h2>CONTROLS</h2>
+      <p>👉 Point your index finger to steer</p>
+      <br />
+      <strong>Wave your hand to begin!</strong>
+      <br /><br />
+      <button id="close-instructions">GOT IT</button>
+    </div>
 
     <!-- CONTENT FADE -->
     <div class="fade-wrapper">
@@ -244,6 +298,7 @@
             </div>
             <div class="arrow down">▼</div>
           </div>
+
           <div id="volume-control">
             VOLUME
             <br />
@@ -258,33 +313,7 @@
         </div>
       </div>
     </div>
-    <script>
-      // All your sound effects go into this array
-      const allSounds = [
-        sndTurn, // add more here if needed
-      ];
 
-      // Load saved volume or default to 0.5
-      const savedVolume = parseFloat(localStorage.getItem('vgVolume')) || 0.5;
-
-      allSounds.forEach((sound) => {
-        sound.volume = savedVolume;
-      });
-
-      const slider = document.getElementById('volume-slider');
-      slider.value = savedVolume;
-
-      // Update volume in real time
-      slider.addEventListener('input', () => {
-        const v = parseFloat(slider.value);
-
-        allSounds.forEach((sound) => {
-          sound.volume = v;
-        });
-
-        localStorage.setItem('vgVolume', v);
-      });
-    </script>
     <!-- JS FADES -->
     <script>
       window.addEventListener('load', () => {
@@ -303,9 +332,41 @@
       const canvas = document.getElementById('output_canvas');
       const ctx = canvas.getContext('2d');
 
-      // SOUND EFFECTS
-      const sndTurn = new Audio('audio/click.wav'); // replace filename as needed
-      sndTurn.volume = 0.5; // optional: lower volume
+      // SINGLE SOUND EFFECT (used both by game + volume slider)
+      const sndTurn = new Audio('audio/click.wav');
+      sndTurn.volume = 0.5;
+
+      // ---- VOLUME SLIDER LOGIC ----
+      const allSounds = [sndTurn];
+      const slider = document.getElementById('volume-slider');
+
+      const savedVolume = parseFloat(localStorage.getItem('vgVolume'));
+      const initialVolume = !isNaN(savedVolume) ? savedVolume : 0.5;
+
+      allSounds.forEach((s) => (s.volume = initialVolume));
+      slider.value = initialVolume;
+
+      slider.addEventListener('input', () => {
+        const v = parseFloat(slider.value);
+        allSounds.forEach((s) => (s.volume = v));
+        localStorage.setItem('vgVolume', v);
+      });
+
+      // ---- NO HAND OVERLAY (debounced) ----
+      let handLastSeen = Date.now();
+      const HAND_TIMEOUT = 400; // ms
+      let overlayVisible = false;
+      const noHandOverlay = document.getElementById('no-hand-overlay');
+
+      // ---- INSTRUCTION OVERLAY ----
+      const instructionOverlay = document.getElementById('instruction-overlay');
+      const closeInstructionsBtn =
+        document.getElementById('close-instructions');
+      let instructionsShown = false;
+
+      closeInstructionsBtn.addEventListener('click', () => {
+        instructionOverlay.classList.remove('visible');
+      });
 
       // ---- SETUP MEDIAPIPE HANDS ----
       const hands = new Hands({
@@ -323,14 +384,30 @@
       let lastDirection = null;
       let stableDirection = null;
       let sameCount = 0;
-      let lastSentDirection = null; // to avoid sending the same key constantly
+      let lastSentDirection = null;
 
       hands.onResults((results) => {
+        const now = Date.now();
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length) {
+          // hand detected
+          handLastSeen = now;
+          if (overlayVisible) {
+            overlayVisible = false;
+            noHandOverlay.style.display = 'none';
+          }
+        } else {
+          // no hand this frame – check timeout
+          if (now - handLastSeen > HAND_TIMEOUT && !overlayVisible) {
+            overlayVisible = true;
+            noHandOverlay.style.display = 'flex';
+          }
+        }
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (results.multiHandLandmarks) {
           for (const landmarks of results.multiHandLandmarks) {
-            // Draw the hand skeleton
             drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
               color: '#00FF00',
               lineWidth: 2,
@@ -346,7 +423,7 @@
             const dx = indexTip.x - wrist.x;
             const dy = indexTip.y - wrist.y;
 
-            // Draw blue arrow
+            // Direction line
             const startX = wrist.x * canvas.width;
             const startY = wrist.y * canvas.height;
             const endX = indexTip.x * canvas.width;
@@ -359,7 +436,7 @@
             ctx.lineWidth = 4;
             ctx.stroke();
 
-            // Determine direction
+            // Direction
             let direction = '';
             if (Math.abs(dx) > Math.abs(dy)) {
               direction = dx < 0 ? 'right' : 'left';
@@ -386,9 +463,8 @@
             if (stableDirection && stableDirection !== lastSentDirection) {
               lastSentDirection = stableDirection;
 
-              // PLAY SOUND
-              sndTurn.currentTime = 0; // rewind so rapid multiple turns still play
-              sndTurn.play().catch(() => {}); // avoid browser autoplay warnings
+              sndTurn.currentTime = 0;
+              sndTurn.play().catch(() => {});
 
               switch (stableDirection) {
                 case 'left':
@@ -436,28 +512,20 @@
             ? 39
             : key === 'ArrowDown'
             ? 40
-            : key === 'a'
-            ? 65
-            : key === 'w'
-            ? 87
-            : key === 's'
-            ? 83
-            : key === 'd'
-            ? 68
             : 0;
 
         function fire(type) {
           const event = doc.createEvent('KeyboardEvent');
           event.initKeyboardEvent(
-            type, // "keydown" or "keyup"
-            true, // bubbles
-            true, // cancelable
+            type,
+            true,
+            true,
             iframe.contentWindow,
-            key, // key
-            0, // location
-            '', // modifiers
-            false, // repeat
-            keyCode // keyCode
+            key,
+            0,
+            '',
+            false,
+            keyCode
           );
 
           Object.defineProperty(event, 'keyCode', { get: () => keyCode });
@@ -477,34 +545,39 @@
         iframe.src = `games/${name}/index.html`;
 
         iframe.onload = () => {
-          // Try to focus so real keyboard also works
+          // show instructions ONCE, when game actually loads
+          if (!instructionsShown) {
+            instructionsShown = true;
+            instructionOverlay.classList.add('visible');
+          }
+
           if (iframe.contentWindow) {
             iframe.contentWindow.focus();
           }
         };
       }
-    </script>
-    <script>
+
+      // read ?game=pacman etc
       const params = new URLSearchParams(window.location.search);
       const game = params.get('game');
-
       if (game) {
         loadGame(game);
       }
-    </script>
-    <script>
+
+      // Direction arrows helper
       function updateArrows(direction) {
         const arrows = document.querySelectorAll('#direction-indicator .arrow');
         arrows.forEach((a) => a.classList.remove('active'));
 
         if (!direction) return;
 
-        const selector = {
-          up: '.up',
-          down: '.down',
-          left: '.left',
-          right: '.right',
-        }[direction];
+        const selector =
+          {
+            up: '.up',
+            down: '.down',
+            left: '.left',
+            right: '.right',
+          }[direction] || null;
 
         if (selector) {
           document
@@ -512,16 +585,15 @@
             .classList.add('active');
         }
       }
-    </script>
-    <script>
+
+      // FULLSCREEN TOGGLE
       const fullscreenBtn = document.getElementById('fullscreenBtn');
       const gameContainer = document.getElementById('gamecontainer');
       const feed = document.getElementById('feed');
 
-      // Enter fullscreen
       function enterFullscreen() {
         feed.style.display = 'none';
-        fullscreenBtn.textContent = '🗗'; // minimize icon
+        fullscreenBtn.textContent = '🗗';
 
         if (gameContainer.requestFullscreen) gameContainer.requestFullscreen();
         else if (gameContainer.webkitRequestFullscreen)
@@ -530,9 +602,8 @@
           gameContainer.msRequestFullscreen();
       }
 
-      // Exit fullscreen
       function exitFullscreen() {
-        fullscreenBtn.textContent = '⛶'; // maximize icon
+        fullscreenBtn.textContent = '⛶';
         feed.style.display = 'block';
 
         if (document.exitFullscreen) document.exitFullscreen();
@@ -540,19 +611,14 @@
         else if (document.msExitFullscreen) document.msExitFullscreen();
       }
 
-      // Button toggles state
       fullscreenBtn.onclick = () => {
-        if (!document.fullscreenElement) {
-          enterFullscreen();
-        } else {
-          exitFullscreen();
-        }
+        if (!document.fullscreenElement) enterFullscreen();
+        else exitFullscreen();
       };
 
-      // Detect ESC or system exit
       document.addEventListener('fullscreenchange', () => {
         if (!document.fullscreenElement) {
-          fullscreenBtn.textContent = '⛶'; // restore icon
+          fullscreenBtn.textContent = '⛶';
           feed.style.display = 'block';
         }
       });
