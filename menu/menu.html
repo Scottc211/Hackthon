@@ -17,6 +17,7 @@
         background-attachment: fixed;
 
         font-family: Arial, sans-serif;
+
         display: flex;
         justify-content: center;
         align-items: center;
@@ -28,15 +29,41 @@
         --carousel-height: 70%;
       }
 
+      /* PAGE LOAD FADE + PLAY FADE OUT */
+      #fadeOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: black;
+        opacity: 1; /* start fully black (fade-in) */
+        pointer-events: none;
+        z-index: 9999;
+        transition: opacity 0.6s ease-in-out;
+      }
+
+      #fadeOverlay.fade-out {
+        opacity: 0; /* fade IN */
+      }
+
+      #fadeOverlay.fade-in {
+        opacity: 1; /* fade OUT on play */
+      }
+
+      /* Purple box area */
       .purple-box-area {
         width: 70vw;
         max-width: 1100px;
         height: var(--carousel-height);
         aspect-ratio: 16 / 9;
+
         box-sizing: border-box;
+
         display: flex;
         justify-content: center;
         align-items: center;
+
         position: relative;
         left: var(--carousel-offset-x);
       }
@@ -85,23 +112,29 @@
         opacity: 0;
       }
 
+      /* Retro PLAY button */
       .retro-play-button {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
+        
         padding: 20px 40px;
         font-family: 'Press Start 2P', cursive;
         font-size: 20px;
         letter-spacing: 2px;
+
         background: rgba(255, 215, 0, 0.28);
         color: #000;
+
         border: 3px solid rgba(255, 215, 0, 0.9);
         border-radius: 10px;
+
         box-shadow:
           0 0 6px rgba(255, 215, 0, 0.8),
           0 0 14px rgba(255, 215, 0, 0.7),
           0 0 24px rgba(255, 215, 0, 0.6);
+
         cursor: pointer;
         z-index: 20;
         transition: 0.2s ease-out;
@@ -110,6 +143,7 @@
       .retro-play-button:hover {
         background: rgba(255, 215, 0, 0.55);
         transform: translate(-50%, -50%) scale(1.07);
+
         box-shadow:
           0 0 12px rgba(255, 215, 0, 1),
           0 0 30px rgba(255, 215, 0, 1);
@@ -135,35 +169,17 @@
 
       #prev { left: 15px; }
       #next { right: 15px; }
-
-      /* 🔥 Fade-Out Overlay */
-      #fadeOverlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: black;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.6s ease-in-out;
-        z-index: 999;
-      }
-
-      #fadeOverlay.active {
-        opacity: 1;
-      }
     </style>
   </head>
 
 <body>
 
-<!-- 🔊 SOUND EFFECTS -->
+<!-- DARK FADE OVERLAY -->
+<div id="fadeOverlay"></div>
+
+<!-- AUDIO -->
 <audio id="menuSound" src="select-menu-47560.mp3"></audio>
 <audio id="startSound" src="game-start-6104.mp3"></audio>
-
-<!-- 🔥 FADE OVERLAY -->
-<div id="fadeOverlay"></div>
 
 <div class="purple-box-area">
   <div class="carousel-container">
@@ -194,6 +210,16 @@
   </div>
 </div>
 
+<!-- PAGE LOAD FADE-IN -->
+<script>
+  window.addEventListener("load", () => {
+    const fadeOverlay = document.getElementById("fadeOverlay");
+    fadeOverlay.classList.add("fade-out");
+    setTimeout(() => fadeOverlay.style.pointerEvents = "none", 700);
+  });
+</script>
+
+<!-- MAIN SCRIPT -->
 <script>
 let index = 0;
 const track = document.getElementById("track");
@@ -201,23 +227,13 @@ const slides = document.querySelectorAll(".carousel-item");
 const playBtn = document.getElementById("playButton");
 const total = slides.length;
 
-// AUDIO
 const menuSound = document.getElementById("menuSound");
 const startSound = document.getElementById("startSound");
-
-// FADE OVERLAY
 const fadeOverlay = document.getElementById("fadeOverlay");
 
 function playMenuSound() {
   menuSound.currentTime = 0;
   menuSound.play();
-}
-
-function fadeAndGo(url) {
-  fadeOverlay.classList.add("active");
-  setTimeout(() => {
-    window.location.href = url;
-  }, 600); // match CSS fade time
 }
 
 function update() {
@@ -240,10 +256,18 @@ playBtn.onclick = () => {
   const activeSlide = slides[index];
   const url = activeSlide.getAttribute("data-link");
 
+  // PLAY SOUND
   startSound.currentTime = 0;
   startSound.play();
 
-  fadeAndGo(url);
+  // START FADE OUT
+  fadeOverlay.classList.remove("fade-out");
+  fadeOverlay.classList.add("fade-in");
+
+  // AFTER fade + sound, navigate
+  setTimeout(() => {
+    window.location.href = url;
+  }, 600);
 };
 </script>
 
