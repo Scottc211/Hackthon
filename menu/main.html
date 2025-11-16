@@ -199,6 +199,10 @@
       const canvas = document.getElementById('output_canvas');
       const ctx = canvas.getContext('2d');
 
+      // SOUND EFFECTS
+      const sndTurn = new Audio('audio/retro-blip.mp3'); // replace filename as needed
+      sndTurn.volume = 0.5; // optional: lower volume
+
       // ---- SETUP MEDIAPIPE HANDS ----
       const hands = new Hands({
         locateFile: (file) =>
@@ -277,6 +281,10 @@
             // Only send when direction changes
             if (stableDirection && stableDirection !== lastSentDirection) {
               lastSentDirection = stableDirection;
+
+              // PLAY SOUND
+              sndTurn.currentTime = 0; // rewind so rapid multiple turns still play
+              sndTurn.play().catch(() => {}); // avoid browser autoplay warnings
 
               switch (stableDirection) {
                 case 'left':
