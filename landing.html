@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VideoGamer – Hackathon 2025</title>
-    <link rel="icon" type="image/jpeg" href="images (2).jpg">
+    <link rel="icon" type="image/jpeg" href="images (2).jpg" />
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
@@ -102,7 +102,6 @@
   </head>
 
   <body>
-
     <!-- 🔊 SOUND EFFECT -->
     <audio id="enterSound" src="enter.mp3"></audio>
 
@@ -117,11 +116,11 @@
     <h2 style="margin-top: 40px; font-size: 14px">by Rayyan & Charles</h2>
 
     <script>
-      const enterBtn = document.getElementById("enterBtn");
-      const enterSound = document.getElementById("enterSound");
-      const fadeOverlay = document.getElementById("fadeOverlay");
+      const enterBtn = document.getElementById('enterBtn');
+      const enterSound = document.getElementById('enterSound');
+      const fadeOverlay = document.getElementById('fadeOverlay');
 
-      enterBtn.addEventListener("click", (event) => {
+      enterBtn.addEventListener('click', (event) => {
         event.preventDefault();
 
         // Play sound
@@ -129,7 +128,7 @@
         enterSound.play();
 
         // Start fade transition
-        fadeOverlay.classList.add("active");
+        fadeOverlay.classList.add('active');
 
         // Navigate after fade
         setTimeout(() => {
@@ -137,6 +136,5 @@
         }, 600); // matches CSS transition time
       });
     </script>
-
   </body>
 </html>

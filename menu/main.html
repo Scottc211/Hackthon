@@ -225,6 +225,7 @@
         color: #00ccff;
         text-shadow: 0 0 8px #00ccff;
         z-index: 200;
+        pointer-events: none;
       }
 
       /* INSTRUCTION OVERLAY */
@@ -410,6 +411,7 @@
         if (results.multiHandLandmarks && results.multiHandLandmarks.length) {
           // hand detected
           handLastSeen = now;
+          instructionOverlay.style.display = 'none';
           if (overlayVisible) {
             overlayVisible = false;
             noHandOverlay.style.display = 'none';
