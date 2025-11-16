@@ -138,6 +138,47 @@
       #next {
         right: 15px;
       }
+ .retro-play-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  padding: 20px 40px;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 20px;
+  letter-spacing: 2px;
+
+  /* Transparent gold glass */
+  background: rgba(255, 215, 0, 0.28);
+  color: #000;
+
+  border: 3px solid rgba(255, 215, 0, 0.9);
+  border-radius: 10px;
+
+  /* Retro glow that works over images */
+  box-shadow:
+    0 0 6px rgba(255, 215, 0, 0.8),
+    0 0 14px rgba(255, 215, 0, 0.7),
+    0 0 24px rgba(255, 215, 0, 0.6);
+
+  cursor: pointer;
+  z-index: 20;
+  transition: 0.2s ease-out;
+}
+
+.retro-play-button:hover {
+  background: rgba(255, 215, 0, 0.55);
+  transform: translate(-50%, -50%) scale(1.07);
+
+  box-shadow:
+    0 0 12px rgba(255, 215, 0, 1),
+    0 0 3
+
+}
+
+
+
     </style>
   </head>
 
@@ -148,22 +189,22 @@
   <div class="carousel-container">
 
     <!-- Play button is OUTSIDE the .carousel-item -->
-    <img id="playButton" class="play-btn" src="play.png" alt="Play">
+<button id="playButton" class="retro-play-button">PLAY</button>
 
     <div class="carousel-track" id="track">
 
-      <div class="carousel-item" data-link="https://example.com/game1">
-        <img class="static" src="image1.jpg">
+      <div class="carousel-item" data-link="main.html?game=snake">
+        <img class="static" src="snake.gif">
         <img class="gif" src="snake.gif">
       </div>
 
-      <div class="carousel-item" data-link="https://example.com/game2">
-        <img class="static" src="image2.jpg">
+      <div class="carousel-item" data-link="main.html?game=pacman">
+        <img class="static" src="pacman.gif">
         <img class="gif" src="pacman.gif">
       </div>
 
-      <div class="carousel-item" data-link="https://example.com/game3">
-        <img class="static" src="image3.jpg">
+      <div class="carousel-item" data-link="main.html?game=spaceinvaders">
+        <img class="static" src="spaceinvaders.gif">
         <img class="gif" src="spaceinvaders.gif">
       </div>
 
