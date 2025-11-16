@@ -38,14 +38,38 @@
         padding-top: 40px;
         box-sizing: border-box;
       }
+      :fullscreen #gamecontainer,
+      #gamecontainer:fullscreen {
+        width: 100vw !important;
+        height: 100vh !important;
+      }
+
+      :fullscreen #gameframe,
+      #gameframe:fullscreen {
+        width: 100vw !important;
+        height: 100vh !important;
+      }
 
       /* GAME CONTAINER */
       #gamecontainer {
+        position: relative;
         width: 800px;
         height: 600px;
+
         background: black;
         border: 3px solid #ffd700;
-        box-shadow: 0 0 18px #ffd700;
+        box-shadow: 0 0 12px #ffd700;
+
+        /* NEW: allow size to change in fullscreen */
+        max-width: 100%;
+        max-height: 100%;
+      }
+
+      #gameframe {
+        width: 100%;
+        height: 100%;
+
+        border: none;
       }
 
       /* CAMERA FEED on the right */
@@ -105,6 +129,30 @@
         color: #ffd700;
         filter: drop-shadow(0 0 8px #ffd700);
       }
+      #fullscreenBtn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 50;
+
+        padding: 10px 14px;
+        font-size: 22px;
+        font-family: 'Press Start 2P', cursive;
+
+        background: rgba(255, 215, 0, 0.3);
+        color: #ffd700;
+        border: 2px solid #ffd700;
+        border-radius: 8px;
+
+        cursor: pointer;
+        box-shadow: 0 0 8px #ffd700;
+        transition: 0.15s ease-in-out;
+      }
+
+      #fullscreenBtn:hover {
+        background: rgba(255, 215, 0, 0.55);
+        transform: scale(1.12);
+      }
     </style>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
@@ -119,6 +167,7 @@
     <div id="layout">
       <!-- GAME takes the left column -->
       <div id="gamecontainer">
+        <button id="fullscreenBtn">⛶</button>
         <iframe id="gameframe" width="800" height="600"></iframe>
       </div>
 
@@ -149,6 +198,10 @@
       const video = document.getElementById('input_video');
       const canvas = document.getElementById('output_canvas');
       const ctx = canvas.getContext('2d');
+
+      // SOUND EFFECTS
+      const sndTurn = new Audio('audio/retro-blip.mp3'); // replace filename as needed
+      sndTurn.volume = 0.5; // optional: lower volume
 
       // ---- SETUP MEDIAPIPE HANDS ----
       const hands = new Hands({
@@ -228,6 +281,10 @@
             // Only send when direction changes
             if (stableDirection && stableDirection !== lastSentDirection) {
               lastSentDirection = stableDirection;
+
+              // PLAY SOUND
+              sndTurn.currentTime = 0; // rewind so rapid multiple turns still play
+              sndTurn.play().catch(() => {}); // avoid browser autoplay warnings
 
               switch (stableDirection) {
                 case 'left':
@@ -351,6 +408,50 @@
             .classList.add('active');
         }
       }
+    </script>
+    <script>
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
+      const gameContainer = document.getElementById('gamecontainer');
+      const feed = document.getElementById('feed');
+
+      // Enter fullscreen
+      function enterFullscreen() {
+        feed.style.display = 'none';
+        fullscreenBtn.textContent = '🗗'; // minimize icon
+
+        if (gameContainer.requestFullscreen) gameContainer.requestFullscreen();
+        else if (gameContainer.webkitRequestFullscreen)
+          gameContainer.webkitRequestFullscreen();
+        else if (gameContainer.msRequestFullscreen)
+          gameContainer.msRequestFullscreen();
+      }
+
+      // Exit fullscreen
+      function exitFullscreen() {
+        fullscreenBtn.textContent = '⛶'; // maximize icon
+        feed.style.display = 'block';
+
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        else if (document.msExitFullscreen) document.msExitFullscreen();
+      }
+
+      // Button toggles state
+      fullscreenBtn.onclick = () => {
+        if (!document.fullscreenElement) {
+          enterFullscreen();
+        } else {
+          exitFullscreen();
+        }
+      };
+
+      // Detect ESC or system exit
+      document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+          fullscreenBtn.textContent = '⛶'; // restore icon
+          feed.style.display = 'block';
+        }
+      });
     </script>
   </body>
 </html>
